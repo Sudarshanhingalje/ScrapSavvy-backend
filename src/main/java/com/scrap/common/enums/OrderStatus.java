@@ -1,0 +1,28 @@
+package com.scrap.common.enums;
+
+public enum OrderStatus {
+
+    // COMMON
+    PENDING,
+
+    // PRODUCT ORDER FLOW
+    ACCEPTED,
+    PACKED,
+    SHIPPED,
+    DELIVERED,
+
+    // SCRAP PICKUP FLOW
+    CONFIRMED,
+    SCHEDULED,
+    OUT_FOR_PICKUP,
+    COMPLETED,
+    OUT_FOR_DELIVERY,
+    // RETURN / REFUND
+    RETURN_REQUESTED,
+    RETURN_APPROVED,
+    REFUNDED,
+
+    // FINAL STATES
+    CANCELLED,
+    REJECTED
+}

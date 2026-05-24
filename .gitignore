@@ -1,0 +1,39 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IntelliJ
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# STS / Eclipse
+.project
+.classpath
+.settings/
+
+# Logs
+*.log
+.factorypath
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# Build
+*.jar
+*.war
+
+# Node
+node_modules/
+
+# Docker
+docker-data/
+
+# Temporary
+tmp/
+temp/

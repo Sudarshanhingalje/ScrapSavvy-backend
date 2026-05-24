@@ -1,0 +1,166 @@
+package com.scrap.auth;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import jakarta.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.scrap.auth.dto.ForgotPasswordRequest;
+import com.scrap.auth.dto.LoginRequest;
+import com.scrap.auth.dto.LoginResponse;
+import com.scrap.auth.dto.SignupRequest;
+import com.scrap.auth.dto.UserProfileDTO;
+import com.scrap.auth.entity.User;
+import com.scrap.auth.entity.UserProfile;
+import com.scrap.auth.repository.UserProfileRepository;
+import com.scrap.auth.repository.UserRepository;
+import com.scrap.common.security.JwtTokenUtil;
+
+@RestController
+@RequestMapping("/api/user")
+public class AuthController {
+
+    @Autowired
+    private UserService userService;
+    
+    @Autowired
+    private UserProfileService userProfileService;
+
+    @Autowired
+    private JwtTokenUtil jwtTokenUtil;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private UserProfileRepository userProfileRepository;
+
+    
+    @PostMapping("/signup")
+    public ResponseEntity<?> registerUser(@RequestBody SignupRequest signupRequest) {
+        try {
+            Optional<User> existingUser = userRepository.findByEmail(signupRequest.getEmail());
+            
+            if (existingUser.isPresent()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email already exists");
+            }
+            User user = userService.registerUser(signupRequest.getEmail(), signupRequest.getPassword());
+            UserProfile userProfile = userProfileService.registerUserProfile(signupRequest, user);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+   
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
+
+        User user = userRepository.getByEmail(loginRequest.getEmail());
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email");
+        }
+
+        if (user.getPassword().equals(loginRequest.getPassword())) {
+
+            String token = jwtTokenUtil.generateToken(user.getUserId(), user.getEmail());
+
+            UserProfile userProfile =
+                    userProfileRepository.getByUser(user);   // ✅ FIX HERE
+
+            LoginResponse loginResponse = new LoginResponse(token, userProfile);
+
+            return ResponseEntity.status(HttpStatus.OK).body(loginResponse);
+        }
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
+    }
+
+    @PutMapping("/forgotpassword")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest forgotPasswordRequest) {
+        if (!forgotPasswordRequest.getPassword().equals(forgotPasswordRequest.getConfirmPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Passwords not matching");
+        }
+        User user = userRepository.getByEmail(forgotPasswordRequest.getEmail());
+        if (forgotPasswordRequest.getPassword().equals(user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password should not be same as previous password");
+        }
+        if (user != null) {
+            user.setPassword(forgotPasswordRequest.getPassword());
+            userService.updateUser(user);
+            return ResponseEntity.status(HttpStatus.OK).body("Password changed successfully!");
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid email");
+    }
+
+    @GetMapping("/logout")
+    public ResponseEntity<?> logoutUser(HttpSession session) {
+        session.invalidate();
+        return ResponseEntity.ok("Logout successful");
+    }
+
+    @GetMapping("/verify/{userProfileId}")
+    public ResponseEntity<?> verifyUser(@PathVariable Long userProfileId) {
+        UserProfile userProfile = userProfileService.getUserProfile(userProfileId);
+        if (userProfile != null){
+            return new ResponseEntity<>(userProfile, HttpStatus.OK);    
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+    }
+
+    @GetMapping("/user/profile")
+    public ResponseEntity<?> getUserProfile(@RequestHeader("Authorization") String token) {
+        if (token != null && jwtTokenUtil.validateToken(token)) {
+            String username = jwtTokenUtil.getUsernameFromToken(token);
+            Optional<User> userOptional = userService.findByEmail(username);
+            if (userOptional.isPresent()) {
+                return ResponseEntity.ok(userOptional.get());
+            }
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+    }
+
+    @PutMapping("/updateprofile/{userProfileId}")
+    public ResponseEntity<?> updateProfile(@PathVariable Long userProfileId, @RequestBody UserProfileDTO userProfileDTO) {
+        UserProfile userProfile = userProfileService.getUserProfile(userProfileId);
+        if (userProfile != null){
+            User user = userRepository.getOne(userProfileDTO.getUserId());
+            userProfile.setCompanyName(userProfileDTO.getCompanyName());
+            userProfile.setCompanyAddress(userProfileDTO.getCompanyAddress());
+            userProfile.setEmailId(userProfileDTO.getEmail());
+            userProfile.setMobile(userProfileDTO.getMobile());
+            userProfile.setName(userProfileDTO.getName());
+            userProfile.setUpdatedOn(LocalDateTime.now());
+            userProfile.setUser(user);
+            userProfileRepository.save(userProfile);
+            return new ResponseEntity<>(userProfile, HttpStatus.OK);    
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid email");
+    }
+    
+    @GetMapping("/profile/{userProfileId}")
+    public ResponseEntity<?> getProfile(@PathVariable Long userProfileId) {
+
+        UserProfile userProfile =
+                userProfileService.getUserProfile(userProfileId);
+
+        if (userProfile != null) {
+            return new ResponseEntity<>(userProfile, HttpStatus.OK);
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid email");
+    }
+}
