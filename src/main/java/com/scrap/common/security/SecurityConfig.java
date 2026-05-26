@@ -1,22 +1,22 @@
 package com.scrap.common.security;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-
 import org.springframework.security.config.http.SessionCreationPolicy;
-
-import org.springframework.security.core.userdetails.UserDetailsService;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -28,84 +28,117 @@ public class SecurityConfig {
     @Autowired
     private JwtResponseFilter jwtResponseFilter;
 
-    @Autowired
-    private UserDetailsService userDetailsService;
-
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
 
-            // ✅ IMPORTANT FIX (THIS IS THE REAL SOLUTION)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
 
-            .sessionManagement(session ->
-                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
+                .cors(cors ->
+                        cors.configurationSource(corsConfigurationSource())
+                )
 
-            .authorizeHttpRequests(auth -> auth
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
 
-                .requestMatchers(
-                        "/ws/**",
-                        "/api/user/login",
-                        "/api/user/signup",
+                .authorizeHttpRequests(auth -> auth
 
-                        "/api/user/profile/**",
-                        "/api/user/updateprofile/**",
-                        "/api/user/bank/**",
+                        // ✅ ALLOW OPTIONS (IMPORTANT)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**")
+                        .permitAll()
 
-                        "/api/scraporders/**",
-                        "/api/customersell/**",
+                        // ✅ AUTH APIs
+                        .requestMatchers(
+                                "/api/user/login",
+                                "/api/user/signup",
+                                "/api/user/forgotpassword",
+                                "/api/user/logout"
+                        ).permitAll()
 
-                        "/api/prices/**",
-                        "/api/transactions/**",
-                        "/api/inventory/**",
+                        // ✅ SWAGGER
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
 
-                        "/api/scrapyard/**",
-                        "/api/scrapyard/invoice/**",
+                        // ✅ PUBLIC APIs
+                        .requestMatchers(
 
-                        "/api/payment/**",
+                                "/ws/**",
 
-                        "/api/delivery/**",
-                        "/api/reviews/**",
+                                "/api/user/profile/**",
+                                "/api/user/updateprofile/**",
+                                "/api/user/bank/**",
+                                "/api/user/verify/**",
+                                "/api/user/user/profile",
 
-                        "/api/scrapyard/getallproducts",
-                        "/api/orders/**",
+                                "/api/scraporders/**",
+                                "/api/customersell/**",
 
-                        "/uploads/**"
-                ).permitAll()
+                                "/api/prices/**",
+                                "/api/transactions/**",
+                                "/api/inventory/**",
 
-                .anyRequest().authenticated()
-            );
+                                "/api/scrapyard/**",
+                                "/api/scrapyard/invoice/**",
 
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterAfter(jwtResponseFilter, JwtAuthenticationFilter.class);
+                                "/api/payment/**",
+
+                                "/api/delivery/**",
+                                "/api/reviews/**",
+
+                                "/api/orders/**",
+                                "/api/scrapyard/getallproducts",
+
+                                "/uploads/**"
+
+                        ).permitAll()
+
+                        // ✅ EVERYTHING ELSE SECURED
+                        .anyRequest().authenticated()
+                );
+
+        http.addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class
+        );
+
+        http.addFilterAfter(
+                jwtResponseFilter,
+                JwtAuthenticationFilter.class
+        );
 
         return http.build();
     }
 
-    // ✅ CORS BEAN (CORRECT)
+    // ✅ CORS CONFIG
     @Bean
-    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource() {
 
-        org.springframework.web.cors.CorsConfiguration config =
-                new org.springframework.web.cors.CorsConfiguration();
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOrigins(
+                List.of("http://localhost:3000")
+        );
+
+        config.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
+        );
+
+        config.setAllowedHeaders(List.of("*"));
 
         config.setAllowCredentials(true);
 
-        config.setAllowedOrigins(java.util.List.of(
-                "http://localhost:3000"
-        ));
-
-        config.setAllowedMethods(java.util.List.of(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS"
-        ));
-
-        config.setAllowedHeaders(java.util.List.of("*"));
-
-        org.springframework.web.cors.UrlBasedCorsConfigurationSource source =
-                new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", config);
 
@@ -116,11 +149,14 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration authenticationConfiguration
     ) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+
+        return authenticationConfiguration
+                .getAuthenticationManager();
     }
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
+
         return new BCryptPasswordEncoder();
     }
 }
