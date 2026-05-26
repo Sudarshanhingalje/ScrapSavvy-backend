@@ -15,9 +15,29 @@ services:
       DB_URL: ${DB_URL}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+
       JWT_SECRET: ${JWT_SECRET}
       RAZORPAY_KEY: ${RAZORPAY_KEY}
       RAZORPAY_SECRET: ${RAZORPAY_SECRET}
+
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+
+      # ✅ ADD THIS (VERY IMPORTANT FIX)
+      GEMINI_API_URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+
       SPRING_PROFILES_ACTIVE: prod
 
     restart: always
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/ai/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    networks:
+      - scrapsavvy-network
+
+networks:
+  scrapsavvy-network:
+    driver: bridge

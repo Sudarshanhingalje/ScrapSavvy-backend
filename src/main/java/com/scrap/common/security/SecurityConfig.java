@@ -55,6 +55,7 @@ public class SecurityConfig {
                         // ✅ AUTH APIs
                         .requestMatchers(
                                 "/api/user/login",
+
                                 "/api/user/signup",
                                 "/api/user/forgotpassword",
                                 "/api/user/logout"
@@ -73,6 +74,7 @@ public class SecurityConfig {
                         .requestMatchers(
 
                                 "/ws/**",
+                                 "/api/ai/**",   // ✅ ADD THIS LINE
 
                                 "/api/user/profile/**",
                                 "/api/user/updateprofile/**",
