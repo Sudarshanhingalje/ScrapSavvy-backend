@@ -8,9 +8,9 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @ActiveProfiles("prod")
 @TestPropertySource(properties = {
-    "DB_URL=jdbc:mysql://scrapsavvy-dbs.czayqqcu6aa7.ap-south-1.rds.amazonaws.com:3306/scrapsavvy",
-    "DB_USER=admin",
-    "DB_PASSWORD=Scrap1308",
+    "DB_URL=jdbc:mysql://localhost:3306/scrapsavvy?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true",
+    "DB_USER=root",
+    "DB_PASSWORD=Sudu@1308",
     "JWT_SECRET=ScrapProjectSuperSecureJwtSecretKey_2026_MustBeLongEnoughForHS512_ChangeThis12345",
     "RAZORPAY_KEY=rzp_test_SteHZcq9L88UIY",
     "RAZORPAY_SECRET=aYMxhx56GwQM7Lal3tLJr7cz",

@@ -127,10 +127,13 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(
+        config.setAllowedOriginPatterns(
         	    List.of(
         	        "http://localhost:3000",
-        	        "http://localhost:5173"
+        	        "http://localhost:5173",
+        	        "https://scrapsavvy.netlify.app",
+        	        "https://*.ngrok-free.app",
+        	        "https://*.ngrok.io"
         	    )
         	);
 
